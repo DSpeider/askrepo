@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "askrepo"
+dynamic = ["version"]
+description = "Ask natural-language questions about a local codebase."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "DSpeider" }]
+keywords = ["cli", "codebase", "retrieval", "static-analysis"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development",
+]
+dependencies = [
+    "httpx>=0.27",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+askrepo = "askrepo.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/DSpeider/askrepo"
+Repository = "https://github.com/DSpeider/askrepo"
+
+[tool.setuptools.dynamic]
+version = { attr = "askrepo.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+askrepo = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
