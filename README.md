@@ -38,7 +38,7 @@ export ASKREPO_MODEL=gpt-4o-mini                     # optional
 askrepo ask "where is the invoice total calculated?" --index examples/tiny_repo
 ```
 
-`examples/tiny_repo` is a two-file billing sample plus a prose note. It also contains `node_modules/`, `build/`, and `.env` so you can see that those are not indexed. Nothing in that tree is a real secret.
+`examples/tiny_repo` is a small billing tree plus prose notes. It also contains `node_modules/`, `build/`, and `.env` so you can see that those are not indexed. Nothing in that tree is a real secret.
 
 To index the project you are sitting in:
 
@@ -65,6 +65,7 @@ The key is read from the environment only. It is not written into the index.
 ```text
 askrepo index [PATH]              # default PATH is the current directory
 askrepo ask QUESTION [--k 5] [--index PATH] [--retriever lexical]
+askrepo eval [PATH] [--k 5] [--cases PATH] [--retriever lexical]
 askrepo --version
 ```
 
@@ -78,6 +79,7 @@ src/askrepo/
   ingest.py     walk, skip, chunk, hints, index IO
   retrieve.py   Retriever protocol and the lexical scorer
   answer.py     offline note, prompt, chat HTTP call
+  eval.py       gold-set hit@k for retrievers
   types.py      Chunk, Index, Hit, Answer
   config.py     environment settings
 ```
@@ -147,7 +149,38 @@ The score is the mean IDF of question tokens that appear in the chunk, plus a fi
 
 That bonus is why "calculate invoice total" should rank `invoice.py` above a markdown file that only says "invoice total". It will not match "how do we bill customers?" unless those words are actually in the tree.
 
+## Retrieval eval
+
+`evals/tiny_repo.json` is the baseline for retrieval experiments. Each case is a question plus the repo-relative file that should answer it. `askrepo eval` builds an in-memory index of `examples/tiny_repo` (the same ingest path as `askrepo index`, nothing written), runs `Retriever.retrieve` for every question, and prints hit@1 and hit@5. It does not call a model and does not read `ASKREPO_API_KEY`.
+
+```bash
+askrepo eval
+```
+
+From a checkout, `python -m askrepo eval` is the same command. The process exits non-zero if a required case misses its rank cutoff. `pytest` runs that check.
+
+Required cases are lookups the lexical scorer should already get: symbol names, "where is X defined", a few exact sentences, and one import hint (`notify.receipt`) that is stored on the chunk. Most of them must be rank 1 (`"at": 1`). `caller-apply-tax` only has to stay inside the top 5, because the definition outranks the call site.
+
+Challenge cases are expected lexical misses. Two of them need an import or call edge into a file that shares no question words (`gateway-hand-off`, `payment-message-callee`). One is a paraphrase of `apply_tax` (`gross-up-paraphrase`). A later graph or embedding retriever should raise the challenge hit rate without dropping required cases. On the lexical baseline, `pytest` fails if a challenge case starts hitting; move it to `required` when that is intentional.
+
+Add a case by appending an object to `evals/tiny_repo.json`. Every path in `expect` has to appear in the top k, and the path has to be a file the indexer actually keeps:
+
+```json
+{
+  "id": "define-apply-tax",
+  "question": "where is apply_tax defined",
+  "expect": ["src/billing/tax.py"],
+  "tier": "required",
+  "at": 1,
+  "note": "Symbol lookup."
+}
+```
+
+`tier` is `required` or `challenge`. `at` is the worst rank that still passes for a required case. Omit it to use the file's `k`.
+
 ## Roadmap
+
+The comparison point for the retrievers below is `askrepo eval`.
 
 1. **Embeddings.** Implement `Retriever` under the name `embedding`. Embed each chunk once, store vectors in a sidecar keyed by chunk id, and embed the query with the same model at ask time. Keep `lexical` available: symbol-shaped queries are often better as keyword hits. A hybrid can sum normalized scores. Ingest remains the source of chunk text. Select the backend with `ASKREPO_RETRIEVER` or `--retriever`. Both names already exist and raise `NotImplementedError`.
 2. **Code graph.** Do not bury this in the chunker. A separate pass should read `symbols` and `imports`, then replace the regexes with real parses. Write `.askrepo/graph.json` as edges (`src`, `dst`, `kind`) for imports, defines, and later calls. A `graph` retriever expands or reranks the lexical or embedding hits by one hop and still returns `list[Hit]`, with an `edge:…` reason. `answer.py` stays unaware of the graph.
@@ -174,7 +207,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-Tests index `examples/tiny_repo` and a few temporary trees. They check skip rules, chunking, ranking, the offline answer path, and the shape of the chat request via `httpx.MockTransport`. They do not call a hosted model and do not need an API key.
+Tests index `examples/tiny_repo` and a few temporary trees. They check skip rules, chunking, ranking, the retrieval gold set, the offline answer path, and the shape of the chat request via `httpx.MockTransport`. They do not call a hosted model and do not need an API key.
 
 ## License
 
