@@ -1,0 +1,166 @@
+{
+  "name": "tiny_repo",
+  "description": "Lexical baseline for examples/tiny_repo. Required cases must hit. Challenge cases need a call or import edge, or a paraphrase, and are expected misses for the lexical retriever. Later embedding and graph backends should raise the challenge hit rate without dropping required cases.",
+  "repo": "examples/tiny_repo",
+  "k": 5,
+  "retriever": "lexical",
+  "cases": [
+    {
+      "id": "define-invoice-total",
+      "question": "where is calculate_invoice_total defined",
+      "expect": ["src/billing/invoice.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Symbol lookup."
+    },
+    {
+      "id": "define-apply-tax",
+      "question": "where is apply_tax defined",
+      "expect": ["src/billing/tax.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Symbol lookup."
+    },
+    {
+      "id": "define-round-money",
+      "question": "where is round_money defined",
+      "expect": ["src/billing/currency.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Symbol lookup."
+    },
+    {
+      "id": "define-place-order",
+      "question": "where is place_order defined",
+      "expect": ["src/checkout/order.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Symbol lookup."
+    },
+    {
+      "id": "define-apply-discount",
+      "question": "where is apply_discount defined",
+      "expect": ["src/checkout/discount.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Symbol lookup."
+    },
+    {
+      "id": "define-handle-checkout",
+      "question": "where is handle_checkout defined",
+      "expect": ["src/api/handler.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Symbol lookup."
+    },
+    {
+      "id": "define-format-receipt",
+      "question": "where is format_receipt defined",
+      "expect": ["src/notify/receipt.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Symbol lookup."
+    },
+    {
+      "id": "define-send-receipt",
+      "question": "where is send_receipt defined",
+      "expect": ["src/notify/email.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Symbol lookup."
+    },
+    {
+      "id": "define-lookup-sku",
+      "question": "where is lookup_sku defined",
+      "expect": ["src/catalog/product.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Symbol lookup."
+    },
+    {
+      "id": "define-render-label",
+      "question": "where is render_label defined",
+      "expect": ["src/shipping/label.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Symbol lookup."
+    },
+    {
+      "id": "quickstart-invoice-total",
+      "question": "where is the invoice total calculated",
+      "expect": ["src/billing/invoice.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Same wording as the README quickstart. calculated does not stem to calculate; the symbol tokens still match."
+    },
+    {
+      "id": "content-tax-yield",
+      "question": "rate of 0.2 on 100 yields 120",
+      "expect": ["src/billing/tax.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Unique sentence in the tax helper."
+    },
+    {
+      "id": "prose-overview",
+      "question": "Billing notes live here",
+      "expect": ["docs/overview.md"],
+      "tier": "required",
+      "at": 1,
+      "note": "Prose file, not the function it points at."
+    },
+    {
+      "id": "prose-flat-rate",
+      "question": "where do shoppers pay a flat rate",
+      "expect": ["docs/tax_policy.md"],
+      "tier": "required",
+      "at": 1,
+      "note": "Policy note. The formula is elsewhere and should not outrank this wording."
+    },
+    {
+      "id": "import-notify-receipt",
+      "question": "which file imports notify.receipt",
+      "expect": ["src/notify/email.py"],
+      "tier": "required",
+      "at": 1,
+      "note": "Import hint already stored on the chunk. The lexical baseline can answer this one."
+    },
+    {
+      "id": "readme-skipped-junk",
+      "question": "node_modules are skipped",
+      "expect": ["README.md"],
+      "tier": "required",
+      "at": 1,
+      "note": "Name lookup against the fixture README, not the pruned directory."
+    },
+    {
+      "id": "caller-apply-tax",
+      "question": "which file calls apply_tax",
+      "expect": ["src/billing/invoice.py"],
+      "tier": "required",
+      "at": 5,
+      "note": "The call site should stay in the window. The lexical baseline ranks the apply_tax definition first."
+    },
+    {
+      "id": "gateway-hand-off",
+      "question": "which module does the shopper-facing gateway hand off to",
+      "expect": ["src/checkout/order.py"],
+      "tier": "challenge",
+      "note": "handler.py imports checkout.order. The order module shares none of these words, so the hit needs the import edge."
+    },
+    {
+      "id": "payment-message-callee",
+      "question": "which helper does the outbound payment message call",
+      "expect": ["src/notify/receipt.py"],
+      "tier": "challenge",
+      "note": "send_receipt calls format_receipt. receipt.py does not contain outbound, payment, or message."
+    },
+    {
+      "id": "gross-up-paraphrase",
+      "question": "where do we gross up a pretax subtotal",
+      "expect": ["src/billing/tax.py"],
+      "tier": "challenge",
+      "note": "Paraphrase of apply_tax. No shared tokens with tax.py. Lexical stops on invoice.py, which mentions subtotal."
+    }
+  ]
+}

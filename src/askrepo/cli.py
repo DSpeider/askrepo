@@ -1,4 +1,4 @@
-"""Command line entry points for ``index`` and ``ask``."""
+"""Command line entry points for ``index``, ``ask``, and ``eval``."""
 
 from dataclasses import replace
 from pathlib import Path
@@ -9,6 +9,7 @@ import typer
 from askrepo import __version__
 from askrepo.answer import AnswerError, answer_question
 from askrepo.config import Settings
+from askrepo.eval import EvalError, format_report, run_eval
 from askrepo.ingest import IngestError, discover_index, index_tree, read_index, resolve_index_file
 from askrepo.retrieve import load_retriever
 from askrepo.types import Answer, Hit, Index
@@ -95,6 +96,42 @@ def ask(
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(render_ask(location, loaded, settings.retriever, hits, result), nl=False)
+
+
+@app.command("eval")
+def eval_retrieval(
+    path: Optional[Path] = typer.Argument(
+        None,
+        help="Repository to index. Defaults to the repo named in the gold file.",
+    ),
+    k: Optional[int] = typer.Option(
+        None,
+        "--k",
+        min=1,
+        max=50,
+        help="How many chunks to retrieve. Defaults to k in the gold file.",
+    ),
+    cases: Optional[Path] = typer.Option(
+        None,
+        "--cases",
+        help="Gold JSON file. Default: evals/tiny_repo.json in the checkout.",
+    ),
+    retriever_name: Optional[str] = typer.Option(
+        None,
+        "--retriever",
+        help="Retrieval backend. Defaults to the gold file, usually lexical.",
+    ),
+) -> None:
+    """Score retrieval hit@k on the gold set. No model calls."""
+
+    try:
+        report = run_eval(repo=path, cases=cases, k=k, retriever_name=retriever_name)
+    except (IngestError, EvalError, NotImplementedError, ValueError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(format_report(report), nl=False)
+    if report.problems():
+        raise typer.Exit(code=1)
 
 
 def render_ask(
